@@ -1,0 +1,65 @@
+# fortinac-mcp
+
+Serveur MCP pour diagnostiquer les rogue hosts sur FortiNAC 7.6.
+
+Interroge l'API REST FortiNAC, cross-reference chaque device contre les profiling rules, et lance des scans nmap pour identifier precisement quelles conditions bloquent la classification.
+
+## Prerequis
+
+- Python 3.10+
+- nmap (`brew install nmap`)
+- Un token API FortiNAC avec acces lecture aux hosts et aux profiling rules
+
+## Installation
+
+```sh
+cd fortinac-mcp
+python3 -m venv .venv
+.venv/bin/pip install -e .
+```
+
+## Configuration
+
+Ajouter dans `~/.mcp.json` :
+
+```json
+{
+  "fortinac": {
+    "type": "stdio",
+    "command": "/chemin/vers/fortinac-mcp/.venv/bin/python",
+    "args": ["-m", "fortinac_mcp"],
+    "env": {
+      "FORTINAC_URL": "https://fortinac.example.com",
+      "FORTINAC_TOKEN": "votre-token-api",
+      "FORTINAC_VERIFY_SSL": "false"
+    }
+  }
+}
+```
+
+Relancer Claude Code pour charger le serveur.
+
+## Outils
+
+- `check_status` -- verifie la connexion API et la disponibilite de nmap
+- `list_rogues` -- liste les rogue hosts (MAC, IP, vendor, VLAN)
+- `diagnose_rogues` -- diagnostic batch : teste chaque rogue contre toutes les profiling rules
+- `diagnose_host` -- diagnostic d'un host par adresse MAC
+- `scan_host` -- scan nmap sur une IP (ports, services, OS)
+- `lookup_vendor` -- recherche le fabricant a partir d'une adresse MAC
+- `get_profiling_rules` -- exporte les regles de profiling depuis FortiNAC
+- `get_host_details` -- details complets d'un host
+- `reprofile_all_rogues` -- relance l'evaluation des rogues cote FortiNAC
+
+## Diagnostic
+
+Pour chaque rogue, `diagnose_rogues` verifie :
+
+- Vendor OUI (correspondance MAC / fabricant attendu)
+- Ports ouverts via nmap (vs ports requis par la regle)
+- DHCP fingerprint (presence et correspondance)
+- SNMP OID (reponse et valeur attendue)
+- IP range (sous-reseau correct)
+- Location (placement reseau)
+
+Le rapport indique les conditions qui passent, celles qui echouent, et propose des actions correctives.
